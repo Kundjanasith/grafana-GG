@@ -6,13 +6,24 @@ import subprocess
 #from __future__ import print_function
 from datetime import date, datetime, timedelta
 import mysql.connector
-
+import psutil, os
 
 cnx = mysql.connector.connect(user='root', password='Kundjanasith@hpcnc801', database='gpu')
 cursor = cnx.cursor()
 
 g1_command = ("INSERT INTO gpu1_utilization (ts, gpu_util) VALUES (%s, %s)")
 g2_command = ("INSERT INTO gpu2_utilization (ts, gpu_util) VALUES (%s, %s)")
+
+g1_memory = ("INSERT INTO gpu1_memory_utilization (ts, mem_util) VALUES (%s, %s)")
+g2_memory = ("INSERT INTO gpu2_memory_utilization (ts, mem_util) VALUES (%s, %s)")
+
+g1_temp = ("INSERT INTO gpu1_temperature (ts, gpu_temp) VALUES (%s, %s)")
+g2_temp = ("INSERT INTO gpu2_temperature (ts, gpu_temp) VALUES (%s, %s)")
+
+c1_usage = ("INSERT INTO c1_usage (ts, cpu_util) VALUES (%s, %s)")
+c2_usage = ("INSERT INTO c2_usage (ts, cpu_util) VALUES (%s, %s)")
+c3_usage = ("INSERT INTO c3_usage (ts, cpu_util) VALUES (%s, %s)")
+c4_usage = ("INSERT INTO c4_usage (ts, cpu_util) VALUES (%s, %s)")
 
 class Watcher:
     DIRECTORY_TO_WATCH = "./"
@@ -56,7 +67,17 @@ class Handler(FileSystemEventHandler):
             print(g1)
             current_t = g1.split(', ')[0]
             print(current_t)
+            cpus = psutil.cpu_percent(interval=1, percpu=True)
+            c1_util = cpus[0]
+            c2_util = cpus[1]
+            c3_util = cpus[2]
+            c4_util = cpus[3]
+            gpu1_temp = g1.split(', ')[7]
+            gpu2_temp = g2.split(', ')[7]
             gpu1_util = g1.split(', ')[8].split(' %')[0]
+            gpu2_util = g2.split(', ')[8].split(' %')[0]
+            mem1_util = g1.split(', ')[9].split(' %')[0]
+            mem2_util = g2.split(', ')[9].split(' %')[0]
             print(gpu1_util)
             ymd = current_t.split(' ')[0]
             y = ymd.split('/')[0]
@@ -70,6 +91,15 @@ class Handler(FileSystemEventHandler):
             #current_t = datetime.utcnow().date()
             #print(current_t)
             cursor.execute(g1_command, (datetime_object,float(gpu1_util)))
+            cursor.execute(g2_command, (datetime_object,float(gpu2_util)))
+            cursor.execute(g1_memory, (datetime_object,float(mem1_util)))
+            cursor.execute(g2_memory, (datetime_object,float(mem2_util)))
+            cursor.execute(g1_temp, (datetime_object,float(gpu1_temp)))
+            cursor.execute(g2_temp, (datetime_object,float(gpu2_temp)))
+            cursor.execute(c1_usage, (datetime_object,float(c1_util)))
+            cursor.execute(c2_usage, (datetime_object,float(c2_util)))
+            cursor.execute(c3_usage, (datetime_object,float(c3_util)))
+            cursor.execute(c4_usage, (datetime_object,float(c4_util)))
             cnx.commit()
             #print(gpu1_util)
        
